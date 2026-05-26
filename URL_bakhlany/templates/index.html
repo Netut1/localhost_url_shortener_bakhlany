@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bakhlany URL - Сокращатель ссылок</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 650px;
+        }
+        
+        .title {
+            text-align: center;
+            font-size: 3em;
+            color: #333;
+            margin-bottom: 30px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .form-group {
+            display: flex;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        
+        label {
+            flex: 0 0 180px;
+            font-weight: 600;
+            color: #444;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .result-field {
+            background-color: #f0f4ff;
+            font-weight: 500;
+        }
+        
+        .button-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 40px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            font-weight: 600;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .status {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 0.9em;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Bakhlany URL</h1>
+        
+        <div class="form-group">
+            <label>Лимит записей:</label>
+            <input type="number" id="max_records" value="100" min="10" max="1000" onchange="processURL()">
+        </div>
+        
+        <div class="form-group">
+            <label>Длинный URL:</label>
+            <input type="text" id="long_url" placeholder="Введите длинный URL" oninput="handleLongUrlInput()">
+        </div>
+        
+        <div class="form-group">
+            <label>Короткий URL:</label>
+            <input type="text" id="short_url" placeholder="Введите короткий URL" oninput="handleShortUrlInput()">
+        </div>
+        
+        <div class="form-group">
+            <label>Результат:</label>
+            <input type="text" id="result" class="result-field" readonly placeholder="Результат появится здесь">
+        </div>
+        
+        <div class="button-container">
+            <button onclick="clearDatabase()">Очистить БД</button>
+        </div>
+        
+        <div class="status" id="status">Готов к работе</div>
+    </div>
+
+    <script>
+        let timeout = null;
+        
+        function handleLongUrlInput() {
+            // Очищаем поле короткого URL
+            document.getElementById('short_url').value = '';
+            
+            // Запускаем обработку с задержкой
+            clearTimeout(timeout);
+            const longUrl = document.getElementById('long_url').value.trim();
+            if (longUrl) {
+                timeout = setTimeout(processURL, 500);
+            } else {
+                document.getElementById('result').value = '';
+            }
+        }
+        
+        function handleShortUrlInput() {
+            // Очищаем поле длинного URL
+            document.getElementById('long_url').value = '';
+            
+            // Запускаем обработку с задержкой
+            clearTimeout(timeout);
+            const shortUrl = document.getElementById('short_url').value.trim();
+            if (shortUrl) {
+                timeout = setTimeout(processURL, 500);
+            } else {
+                document.getElementById('result').value = '';
+            }
+        }
+        
+        async function processURL() {
+            const longUrl = document.getElementById('long_url').value.trim();
+            const shortUrl = document.getElementById('short_url').value.trim();
+            const maxRecords = document.getElementById('max_records').value;
+            
+            if (!longUrl && !shortUrl) {
+                return;
+            }
+            
+            document.getElementById('status').textContent = 'Обработка...';
+            document.getElementById('status').style.color = '#667eea';
+            
+            try {
+                console.log('Отправка запроса:', { long_url: longUrl, short_url: shortUrl });
+                
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        long_url: longUrl,
+                        short_url: shortUrl,
+                        max_records: maxRecords
+                    })
+                });
+                
+                console.log('Ответ получен:', response.status);
+                
+                const data = await response.json();
+                console.log('Данные:', data);
+                
+                document.getElementById('result').value = data.result;
+                document.getElementById('status').textContent = 'Готово ✓';
+                document.getElementById('status').style.color = '#4CAF50';
+                
+            } catch (error) {
+                console.error('Ошибка:', error);
+                document.getElementById('result').value = 'Ошибка соединения с сервером';
+                document.getElementById('status').textContent = 'Ошибка ✗';
+                document.getElementById('status').style.color = '#f44336';
+            }
+        }
+        
+        async function clearDatabase() {
+            if (!confirm('Вы уверены, что хотите очистить базу данных?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch('/clear', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                document.getElementById('result').value = data.result;
+                document.getElementById('long_url').value = '';
+                document.getElementById('short_url').value = '';
+                
+                setTimeout(() => {
+                    document.getElementById('result').value = '';
+                }, 3000);
+                
+            } catch (error) {
+                document.getElementById('result').value = 'Ошибка при очистке';
+            }
+        }
+        
+        // Проверка соединения при загрузке
+        window.onload = function() {
+            console.log('Страница загружена, проверка сервера...');
+            fetch('/process', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({long_url: '', short_url: '', max_records: 100})
+            })
+            .then(() => {
+                document.getElementById('status').textContent = 'Сервер подключен ✓';
+                document.getElementById('status').style.color = '#4CAF50';
+            })
+            .catch(() => {
+                document.getElementById('status').textContent = 'Сервер недоступен ✗';
+                document.getElementById('status').style.color = '#f44336';
+            });
+        };
+    </script>
+</body>
+</html>
